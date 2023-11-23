@@ -1,0 +1,584 @@
+1.student database
+//creation of tables
+CREATE TABLE STUDENT (
+    snum INT PRIMARY KEY,
+    sname VARCHAR(50),
+    major VARCHAR(50),
+    levels VARCHAR(10),
+    age INT
+);
+
+CREATE TABLE CLASS (
+    cname VARCHAR(50) PRIMARY KEY,
+    meetsat VARCHAR(10),
+    room VARCHAR(10),
+    fid INT
+);
+
+CREATE TABLE ENROLLED (
+    snum INT,
+    cname VARCHAR(50),
+    FOREIGN KEY (snum) REFERENCES STUDENT(snum),
+    FOREIGN KEY (cname) REFERENCES CLASS(cname)
+);
+
+CREATE TABLE FACULTY (
+    fid INT PRIMARY KEY,
+    fname VARCHAR(50),
+    deptid INT
+);
+
+//insertion of data
+-- Inserting data into STUDENT table
+INSERT INTO STUDENT VALUES
+    (1, 'Alice', 'Computer Science', 'JR', 20),
+    (2, 'Bob', 'Electrical Engineering', 'JR', 21),
+    (3, 'Carol', 'Biology', 'SR', 22),
+    (4, 'David', 'Mathematics', 'JR', 20),
+    (5, 'Eve', 'Chemistry', 'SR', 23);
+
+-- Inserting data into CLASS table
+INSERT INTO CLASS VALUES
+    ('Math101', 'MWF', 'R128', 101),
+    ('CS202', 'TTh', 'R128', 102),
+    ('Biology101', 'MWF', 'R101', 103),
+    ('Physics201', 'MWF', 'R128', 104);
+
+-- Inserting data into ENROLLED table
+INSERT INTO ENROLLED VALUES
+    (1, 'Math101'),
+    (2, 'Math101'),
+    (2, 'CS202'),
+    (3, 'Biology101'),
+    (4, 'Physics201'),
+    (5, 'Biology101'),
+    (5, 'CS202');
+
+-- Inserting data into FACULTY table
+INSERT INTO FACULTY VALUES
+    (101, 'Prof. Harshith', 201),
+    (102, 'Prof. Smith', 202),
+    (103, 'Prof. Johnson', 203),
+    (104, 'Prof. Brown', 201);
+
+// queriesss
+1.
+SELECT DISTINCT S.sname
+FROM STUDENT S
+JOIN ENROLLED E ON S.snum = E.snum
+JOIN CLASS C ON E.cname = C.cname
+JOIN FACULTY F ON C.fid = F.fid
+WHERE S.levels = 'JR' AND F.fname = 'Prof. Harshith';
+
+2.
+SELECT DISTINCT C.cname
+FROM CLASS C
+LEFT JOIN ENROLLED E ON C.cname = E.cname
+WHERE C.room = 'R128' OR (SELECT COUNT(*) FROM ENROLLED WHERE cname = C.cname) >= 5;
+
+3.
+SELECT DISTINCT S.sname
+FROM STUDENT S
+JOIN ENROLLED E1 ON S.snum = E1.snum
+JOIN ENROLLED E2 ON S.snum = E2.snum AND E1.cname <> E2.cname
+JOIN CLASS C1 ON E1.cname = C1.cname
+JOIN CLASS C2 ON E2.cname = C2.cname
+WHERE C1.meetsat = C2.meetsat;
+
+4.
+SELECT DISTINCT F.fname
+FROM FACULTY F
+JOIN CLASS C ON F.fid = C.fid
+WHERE NOT EXISTS (
+    SELECT DISTINCT room
+    FROM CLASS
+    WHERE room NOT IN (SELECT DISTINCT room FROM CLASS WHERE fid = F.fid)
+);
+
+5.
+SELECT F.fname
+FROM FACULTY F
+JOIN CLASS C ON F.fid = C.fid
+GROUP BY F.fid
+HAVING SUM((SELECT COUNT(*) FROM ENROLLED WHERE cname = C.cname)) < 5;
+
+
+----------------------------------------------------------------------------
+
+2. DATABASE FLIGHT
+CREATE TABLE FLIGHTS (
+    no INT PRIMARY KEY,
+    fromPlace VARCHAR(50),
+    toPlace VARCHAR(50),
+    distance INT,
+    Departs DATE,
+    arrives DATE,
+    price REAL
+);
+
+CREATE TABLE AIRCRAFT (
+    aid INT PRIMARY KEY,
+    aname VARCHAR(50),
+    cruisingrange INT
+);
+
+CREATE TABLE CERTIFIED (
+    eid INT,
+    aid INT,
+    FOREIGN KEY (eid) REFERENCES EMPLOYEES(eid),
+    FOREIGN KEY (aid) REFERENCES AIRCRAFT(aid)
+);
+
+CREATE TABLE EMPLOYEES (
+    eid INT PRIMARY KEY,
+    ename VARCHAR(50),
+    salary INT
+);
+
+// INSERTION OF DATA
+
+
+-- Inserting data into FLIGHTS table
+INSERT INTO FLIGHTS VALUES
+    (1, 'Bengaluru', 'Frankfurt', 8000, '2023-08-01', '2023-08-02', 1500.0),
+    (2, 'Bengaluru', 'New Delhi', 300, '2023-08-03', '2023-08-03', 200.0),
+    (3, 'New Delhi', 'Frankfurt', 7200, '2023-08-04', '2023-08-05', 1400.0);
+
+-- Inserting data into AIRCRAFT table
+INSERT INTO AIRCRAFT VALUES
+    (101, 'Boeing 737', 9000),
+    (102, 'Airbus A320', 8000),
+    (103, 'Boeing 777', 9500);
+
+-- Inserting data into CERTIFIED table
+INSERT INTO CERTIFIED VALUES
+    (201, 101),
+    (202, 101),
+    (203, 102),
+    (204, 103);
+
+-- Inserting data into EMPLOYEES table
+INSERT INTO EMPLOYEES VALUES
+    (201, 'Pilot 1', 90000),
+    (202, 'Pilot 2', 85000),
+    (203, 'Pilot 3', 82000),
+    (204, 'Pilot 4', 75000);
+
+//QUERIESS
+
+1. Find the names of aircraft such that all pilots certified to operate them have salaries more than Rs.80,000:
+
+sql
+Copy code
+SELECT A.aname
+FROM AIRCRAFT A
+WHERE NOT EXISTS (
+    SELECT E.eid
+    FROM CERTIFIED C
+    JOIN EMPLOYEES E ON C.eid = E.eid
+    WHERE C.aid = A.aid AND E.salary <= 80000
+);
+
+2. For each pilot who is certified for more than three aircrafts, find the eid and the maximum cruisingrange of the aircraft for which she or he is certified:
+
+
+SELECT C.eid, MAX(A.cruisingrange) AS max_cruisingrange
+FROM CERTIFIED C
+JOIN AIRCRAFT A ON C.aid = A.aid
+GROUP BY C.eid
+HAVING COUNT(*) > 3;
+
+
+3. Find the names of pilots whose salary is less than the price of the cheapest route from Bengaluru to Frankfurt:
+
+
+SELECT E.ename
+FROM EMPLOYEES E
+JOIN CERTIFIED C ON E.eid = C.eid
+JOIN AIRCRAFT A ON C.aid = A.aid
+JOIN FLIGHTS F ON A.aname = F.fromPlace AND F.toPlace = 'Frankfurt'
+WHERE E.salary < (SELECT MIN(F.price) FROM FLIGHTS WHERE F.fromPlace = 'Bengaluru' AND F.toPlace = 'Frankfurt');
+
+
+4. Find the names of pilots certified for some Boeing aircraft:
+
+
+SELECT DISTINCT E.ename
+FROM EMPLOYEES E
+JOIN CERTIFIED C ON E.eid = C.eid
+JOIN AIRCRAFT A ON C.aid = A.aid
+WHERE A.aname LIKE 'Boeing%';
+
+
+5. Find the aids of all aircraft that can be used on routes from Bengaluru to New Delhi:
+
+
+SELECT A.aid
+FROM AIRCRAFT A
+WHERE EXISTS (
+    SELECT F.no
+    FROM FLIGHTS F
+    WHERE F.fromPlace = 'Bengaluru' AND F.toPlace = 'New Delhi' AND F.distance <= A.cruisingrange
+);
+
+------------------------------------------------------------------------------------------
+
+3.
+CREATE TABLE AUTHOR (
+    author_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    city VARCHAR(50),
+    country VARCHAR(50)
+);
+
+CREATE TABLE PUBLISHER (
+    publisher_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    city VARCHAR(50),
+    country VARCHAR(50)
+);
+
+CREATE TABLE CATEGORY (
+    category_id INT PRIMARY KEY,
+    description VARCHAR(50)
+);
+
+CREATE TABLE CATALOG (
+    book_id INT PRIMARY KEY,
+    title VARCHAR(100),
+    author_id INT,
+    publisher_id INT,
+    category_id INT,
+    year INT,
+    price INT,
+    FOREIGN KEY (author_id) REFERENCES AUTHOR(author_id),
+    FOREIGN KEY (publisher_id) REFERENCES PUBLISHER(publisher_id),
+    FOREIGN KEY (category_id) REFERENCES CATEGORY(category_id)
+);
+
+CREATE TABLE ORDER_DETAILS (
+    order_no INT PRIMARY KEY,
+    book_id INT,
+    quantity INT,
+    FOREIGN KEY (book_id) REFERENCES CATALOG(book_id)
+);
+2. Insert Dummy Data:
+
+sql
+Copy code
+-- Inserting data into AUTHOR table
+INSERT INTO AUTHOR VALUES
+    (1, 'Author 1', 'City A', 'Country X'),
+    (2, 'Author 2', 'City B', 'Country Y'),
+    (3, 'Author 3', 'City C', 'Country Z');
+
+-- Inserting data into PUBLISHER table
+INSERT INTO PUBLISHER VALUES
+    (1, 'Publisher A', 'City X', 'Country Z'),
+    (2, 'Publisher B', 'City Y', 'Country Y'),
+    (3, 'Publisher C', 'City Z', 'Country X');
+
+-- Inserting data into CATEGORY table
+INSERT INTO CATEGORY VALUES
+    (1, 'Fiction'),
+    (2, 'Science Fiction'),
+    (3, 'Mystery');
+
+-- Inserting data into CATALOG table
+INSERT INTO CATALOG VALUES
+    (1, 'Book 1', 1, 1, 1, 2020, 20),
+    (2, 'Book 2', 2, 2, 2, 2022, 25),
+    (3, 'Book 3', 3, 3, 1, 2021, 18);
+
+-- Inserting data into ORDER_DETAILS table
+INSERT INTO ORDER_DETAILS VALUES
+    (1001, 1, 5),
+    (1002, 2, 3),
+    (1003, 3, 2);
+
+--------------------------------------------------------------------------------------------------------------
+4....
+1. Create Tables:
+
+sql
+Copy code
+CREATE TABLE BRANCH (
+    branch_name VARCHAR(50) PRIMARY KEY,
+    branch_city VARCHAR(50),
+    assets REAL
+);
+
+CREATE TABLE ACCOUNT (
+    accno INT PRIMARY KEY,
+    branch_name VARCHAR(50),
+    balance REAL,
+    FOREIGN KEY (branch_name) REFERENCES BRANCH(branch_name)
+);
+
+CREATE TABLE DEPOSITOR (
+    customer_name VARCHAR(50),
+    accno INT,
+    FOREIGN KEY (accno) REFERENCES ACCOUNT(accno)
+);
+
+CREATE TABLE CUSTOMER (
+    customer_name VARCHAR(50) PRIMARY KEY,
+    customer_street VARCHAR(100),
+    customer_city VARCHAR(50)
+);
+
+CREATE TABLE LOAN (
+    Loan_number INT PRIMARY KEY,
+    branch_name VARCHAR(50),
+    amount REAL,
+    FOREIGN KEY (branch_name) REFERENCES BRANCH(branch_name)
+);
+
+CREATE TABLE BORROWER (
+    customer_name VARCHAR(50),
+    Loan_number INT,
+    FOREIGN KEY (Loan_number) REFERENCES LOAN(Loan_number)
+);
+2. Insert Dummy Data:
+
+sql
+Copy code
+-- Inserting data into BRANCH table
+INSERT INTO BRANCH VALUES
+    ('Main', 'City A', 1000000.0),
+    ('Downtown', 'City B', 750000.0);
+
+-- Inserting data into ACCOUNT table
+INSERT INTO ACCOUNT VALUES
+    (101, 'Main', 5000.0),
+    (102, 'Main', 7000.0),
+    (103, 'Downtown', 3000.0);
+
+-- Inserting data into DEPOSITOR table
+INSERT INTO DEPOSITOR VALUES
+    ('Customer 1', 101),
+    ('Customer 1', 102),
+    ('Customer 2', 103);
+
+-- Inserting data into CUSTOMER table
+INSERT INTO CUSTOMER VALUES
+    ('Customer 1', 'Street X', 'City A'),
+    ('Customer 2', 'Street Y', 'City B');
+
+-- Inserting data into LOAN table
+INSERT INTO LOAN VALUES
+    (201, 'Main', 15000.0),
+    (202, 'Main', 10000.0),
+    (203, 'Downtown', 8000.0);
+
+-- Inserting data into BORROWER table
+INSERT INTO BORROWER VALUES
+    ('Customer 1', 201),
+    ('Customer 1', 202),
+    ('Customer 2', 203);
+-------------------------------------------------------------------------------------------------
+
+5.....
+
+1. Create Tables:
+
+sql
+Copy code
+CREATE TABLE PERSON (
+    driver_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    address VARCHAR(100)
+);
+
+CREATE TABLE CAR (
+    regno VARCHAR(10) PRIMARY KEY,
+    model VARCHAR(50),
+    year INT
+);
+
+CREATE TABLE ACCIDENT (
+    report_number INT PRIMARY KEY,
+    accd_date DATE,
+    location VARCHAR(100)
+);
+
+CREATE TABLE OWNS (
+    driver_id INT,
+    regno VARCHAR(10),
+    FOREIGN KEY (driver_id) REFERENCES PERSON(driver_id),
+    FOREIGN KEY (regno) REFERENCES CAR(regno)
+);
+
+CREATE TABLE PARTICIPATED (
+    driver_id INT,
+    regno VARCHAR(10),
+    report_number INT,
+    damage_amount INT,
+    FOREIGN KEY (driver_id) REFERENCES PERSON(driver_id),
+    FOREIGN KEY (regno) REFERENCES CAR(regno),
+    FOREIGN KEY (report_number) REFERENCES ACCIDENT(report_number)
+);
+2. Insert Dummy Data:
+
+sql
+Copy code
+-- Inserting data into PERSON table
+INSERT INTO PERSON VALUES
+    (101, 'Driver 1', 'Address 1'),
+    (102, 'Driver 2', 'Address 2'),
+    (103, 'Driver 3', 'Address 3');
+
+-- Inserting data into CAR table
+INSERT INTO CAR VALUES
+    ('KA123', 'Model A', 2019),
+    ('KA456', 'Model B', 2020),
+    ('KA789', 'Model C', 2021);
+
+-- Inserting data into ACCIDENT table
+INSERT INTO ACCIDENT VALUES
+    (1, '2022-01-15', 'Location X'),
+    (2, '2022-02-20', 'Location Y'),
+    (3, '2022-03-25', 'Location Z'),
+    (4, '2020-05-10', 'Location W');
+
+-- Inserting data into OWNS table
+INSERT INTO OWNS VALUES
+    (101, 'KA123'),
+    (102, 'KA456'),
+    (103, 'KA789');
+
+-- Inserting data into PARTICIPATED table
+INSERT INTO PARTICIPATED VALUES
+    (101, 'KA123', 1, 5000),
+    (102, 'KA456', 2, 8000),
+    (103, 'KA789', 3, 6000),
+    (101, 'KA123', 4, 10000);
+----------------------------------------------------------------------------------------------
+6.
+CREATE TABLE SALESMAN (
+    Salesman_id INT PRIMARY KEY,
+    Name VARCHAR(50),
+    City VARCHAR(50),
+    Commission DECIMAL(5, 2)
+);
+
+CREATE TABLE CUSTOMER (
+    Customer_id INT PRIMARY KEY,
+    Cust_Name VARCHAR(50),
+    City VARCHAR(50),
+    Grade CHAR(1),
+    Salesman_id INT,
+    FOREIGN KEY (Salesman_id) REFERENCES SALESMAN(Salesman_id)
+);
+
+CREATE TABLE ORDERS (
+    Ord_No INT PRIMARY KEY,
+    Purchase_Amt DECIMAL(10, 2),
+    Ord_Date DATE,
+    Customer_id INT,
+    Salesman_id INT,
+    FOREIGN KEY (Customer_id) REFERENCES CUSTOMER(Customer_id),
+    FOREIGN KEY (Salesman_id) REFERENCES SALESMAN(Salesman_id)
+);
+2. Insert Dummy Data:
+
+sql
+Copy code
+-- Inserting data into SALESMAN table
+INSERT INTO SALESMAN VALUES
+    (1001, 'John', 'Bangalore', 0.15),
+    (1002, 'Alice', 'Mumbai', 0.12),
+    (1003, 'Bob', 'Delhi', 0.10),
+    (1004, 'Eve', 'Chennai', 0.08);
+
+-- Inserting data into CUSTOMER table
+INSERT INTO CUSTOMER VALUES
+    (2001, 'Customer 1', 'Bangalore', 'A', 1001),
+    (2002, 'Customer 2', 'Mumbai', 'B', 1002),
+    (2003, 'Customer 3', 'Delhi', 'A', 1001),
+    (2004, 'Customer 4', 'Chennai', 'C', 1003),
+    (2005, 'Customer 5', 'Bangalore', 'B', 1001);
+
+-- Inserting data into ORDERS table
+INSERT INTO ORDERS VALUES
+    (3001, 5000.00, '2023-08-01', 2001, 1001),
+    (3002, 3000.00, '2023-08-02', 2002, 1002),
+    (3003, 6000.00, '2023-08-03', 2003, 1001),
+    (3004, 7000.00, '2023-08-04', 2004, 1003),
+    (3005, 8000.00, '2023-08-05', 2005, 1001);
+-------------------------------------------------------------------------------------------------------------------------
+
+7.
+1. Create Tables:
+
+sql
+Copy code
+CREATE TABLE ACTOR (
+    Act_id INT PRIMARY KEY,
+    Act_Name VARCHAR(50),
+    Act_Gender VARCHAR(10)
+);
+
+CREATE TABLE DIRECTOR (
+    Dir_id INT PRIMARY KEY,
+    Dir_Name VARCHAR(50),
+    Dir_Phone VARCHAR(15)
+);
+
+CREATE TABLE MOVIES (
+    Mov_id INT PRIMARY KEY,
+    Mov_Title VARCHAR(100),
+    Mov_Year INT,
+    Mov_Lang VARCHAR(20),
+    Dir_id INT,
+    FOREIGN KEY (Dir_id) REFERENCES DIRECTOR(Dir_id)
+);
+
+CREATE TABLE MOVIE_CAST (
+    Act_id INT,
+    Mov_id INT,
+    Role VARCHAR(50),
+    PRIMARY KEY (Act_id, Mov_id),
+    FOREIGN KEY (Act_id) REFERENCES ACTOR(Act_id),
+    FOREIGN KEY (Mov_id) REFERENCES MOVIES(Mov_id)
+);
+
+CREATE TABLE RATING (
+    Mov_id INT PRIMARY KEY,
+    Rev_Stars INT,
+    FOREIGN KEY (Mov_id) REFERENCES MOVIES(Mov_id)
+);
+2. Insert Dummy Data:
+
+sql
+Copy code
+-- Inserting data into DIRECTOR table
+INSERT INTO DIRECTOR VALUES
+    (101, 'Sanjay Leela Bansali', '123-456-7890'),
+    (102, 'Ram Gopal Verma', '987-654-3210'),
+    (103, 'Karan Johar', '555-555-5555');
+
+-- Inserting data into ACTOR table
+INSERT INTO ACTOR VALUES
+    (201, 'Actor 1', 'Male'),
+    (202, 'Actor 2', 'Female'),
+    (203, 'Actor 3', 'Male');
+
+-- Inserting data into MOVIES table
+INSERT INTO MOVIES VALUES
+    (301, 'Movie 1', 2020, 'English', 101),
+    (302, 'Movie 2', 2019, 'Hindi', 102),
+    (303, 'Movie 3', 2022, 'Hindi', 101);
+
+-- Inserting data into MOVIE_CAST table
+INSERT INTO MOVIE_CAST VALUES
+    (201, 301, 'Lead'),
+    (202, 301, 'Supporting'),
+    (203, 302, 'Lead'),
+    (201, 303, 'Lead');
+
+-- Inserting data into RATING table
+INSERT INTO RATING VALUES
+    (301, 4),
+    (302, 3),
+    (303, 5);
